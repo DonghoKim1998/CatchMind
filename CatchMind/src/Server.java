@@ -10,6 +10,11 @@ public class Server {
 	// userName-ObjectOutputStream 쌍의 클라이언트 OutputStream 저장공간
 	HashMap<String, ObjectOutputStream> clientOutputStreams = new HashMap<String, ObjectOutputStream>();
 
+	public static void main(String[] args) {
+		Server server = new Server();
+		server.go();
+	}
+
 	public void go() {
 		try {
 			ServerSocket serverSocket = new ServerSocket(9999);
@@ -94,7 +99,13 @@ public class Server {
 		clientOutputStreams.put(user, writer);
 		// 새로운 로그인 리스트를 전체에게 보내 줌
 		broadCastMessage(new Message(Message.MsgType.LOGIN_LIST, "", "", makeClientList()));
-		broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", user+"님이 접속하셨습니다."));
+		broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", user + "님이 접속하셨습니다."));
+	}
+
+	private synchronized void handleLogout(String user) {
+		clientOutputStreams.remove(user);
+		broadCastMessage(new Message(Message.MsgType.LOGIN_LIST, "", "", makeClientList()));
+		broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", user + "님이 나가셨습니다."));
 	}
 
 	private synchronized void handleMessage(String sender, String receiver, String msg) {
@@ -112,11 +123,6 @@ public class Server {
 			System.out.println("Server: 서버에서 송신 중 이상 발생");
 			e.printStackTrace();
 		}
-	}
-
-	private synchronized void handleLogout(String user) {
-		clientOutputStreams.remove(user);
-		broadCastMessage(new Message(Message.MsgType.LOGIN_LIST, "", "", makeClientList()));
 	}
 
 	private void broadCastMessage(Message message) {
@@ -137,7 +143,7 @@ public class Server {
 			}
 		}
 	}
-	
+
 	private void broadCastLogin(String str) {
 		String user;
 		Set<String> users = clientOutputStreams.keySet();
@@ -167,11 +173,6 @@ public class Server {
 		}
 
 		return userList;
-	}
-
-	public static void main(String[] args) {
-		Server server = new Server();
-		server.go();
 	}
 
 }

@@ -1,18 +1,20 @@
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -24,7 +26,7 @@ import javax.swing.ScrollPaneConstants;
 public class Client {
 	JFrame frame;
 	JTextArea chatLog, chat;
-	JScrollPane chatLogScroller;
+	JScrollPane chatLogScroller, chatScroller, userListScroller;
 	JList userList;
 	JButton logButton;
 
@@ -36,6 +38,11 @@ public class Client {
 	Socket socket;
 	ObjectInputStream reader; // 수신용 스트림
 	ObjectOutputStream writer; // 송신용 스트림
+
+	public static void main(String[] args) {
+		Client client = new Client();
+		client.go();
+	}
 
 	private void go() {
 		frame = new JFrame();
@@ -53,7 +60,8 @@ public class Client {
 		// 참가자 목록
 		String[] list = { Message.ALL };
 		userList = new JList(list);
-		JScrollPane userListScroller = new JScrollPane(userList);
+		userList.setSelectedIndex(0);
+		userListScroller = new JScrollPane(userList);
 		userListScroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 		userListScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
@@ -63,12 +71,11 @@ public class Client {
 
 		// 메시지 입력 창
 		chat = new JTextArea(15, 25);
-		chat.setText("메시지 입력");
 		chat.addKeyListener(new EnterKeyListener());
 		chat.setLineWrap(true);
 		chat.setWrapStyleWord(true);
 		chat.setEditable(true);
-		JScrollPane chatScroller = new JScrollPane(chat);
+		chatScroller = new JScrollPane(chat);
 		chatScroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 		chatScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
@@ -76,22 +83,34 @@ public class Client {
 		JPanel mainPanel = new JPanel();
 		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
 
+		JPanel statePanel = new JPanel();
+		statePanel.setLayout(new BoxLayout(statePanel, BoxLayout.Y_AXIS));
+		statePanel.setPreferredSize(new Dimension(400, 600));
+
+		JPanel stateNorthPanel = new JPanel();
+		stateNorthPanel.setLayout(new BoxLayout(stateNorthPanel, BoxLayout.PAGE_AXIS));
+		stateNorthPanel.add(chatLogScroller);
+
+		JPanel userPanel = new JPanel();
+		userPanel.setLayout(new BoxLayout(userPanel, BoxLayout.Y_AXIS));
+		userPanel.add(new JLabel("  참여자 목록"));
+		userPanel.add(userListScroller);
 		JPanel chatPanel = new JPanel();
 		chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
-		chatPanel.setPreferredSize(new Dimension(400, 600));
-		JPanel chatNorthPanel = new JPanel();
-		chatNorthPanel.setLayout(new BoxLayout(chatNorthPanel, BoxLayout.PAGE_AXIS));
-		chatNorthPanel.add(chatLogScroller);
-		JPanel chatSouthPanel = new JPanel();
-		chatSouthPanel.setLayout(new BoxLayout(chatSouthPanel, BoxLayout.X_AXIS));
-		chatSouthPanel.add(userListScroller);
-		chatSouthPanel.add(chatScroller);
+		chatPanel.add(new JLabel("                메시지 입력"));
+		chatPanel.add(chatScroller);
 
-		chatPanel.add(chatNorthPanel);
-		chatPanel.add(chatSouthPanel);
+		JPanel stateSouthPanel = new JPanel();
+		stateSouthPanel.setLayout(new BoxLayout(stateSouthPanel, BoxLayout.X_AXIS));
 
-		mainPanel.add(BorderLayout.CENTER, game);
-		mainPanel.add(BorderLayout.EAST, chatPanel);
+		stateSouthPanel.add(userPanel);
+		stateSouthPanel.add(chatPanel);
+
+		statePanel.add(stateNorthPanel);
+		statePanel.add(stateSouthPanel);
+
+		mainPanel.add(game);
+		mainPanel.add(statePanel);
 		frame.getContentPane().add(mainPanel);
 
 		// 서버와 통신 시도
@@ -100,6 +119,8 @@ public class Client {
 		readerThread.start();
 
 		// 프레임 설정
+		frame.addWindowListener(new CloseListener());
+
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setBounds(0, 0, 1200, 900);
 		frame.setLocationRelativeTo(null);
@@ -151,8 +172,7 @@ public class Client {
 							continue;
 
 						chatLog.append(message.getSender() + ": " + message.getMessage() + "\n");
-					}
-					else if (type == Message.MsgType.LOGIN_FAILURE) {
+					} else if (type == Message.MsgType.LOGIN_FAILURE) {
 						JOptionPane.showMessageDialog(null, "이미 있는 아이디입니다. 다시 로그인하세요");
 						login();
 					}
@@ -250,9 +270,50 @@ public class Client {
 		}
 	}
 
-	public static void main(String[] args) {
-		Client client = new Client();
-		client.go();
+	private class CloseListener implements WindowListener {
+		@Override
+		public void windowOpened(WindowEvent e) {
+		}
+
+		@Override
+		public void windowClosing(WindowEvent e) {
+			JOptionPane.showMessageDialog(null, "게임을 종료합니다.");
+
+			try {
+				writer.writeObject(new Message(Message.MsgType.LOGOUT, userName, "", ""));
+				writer.flush();
+
+				writer.close();
+				reader.close();
+				socket.close();
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(null, "로그아웃 중 서버와의 문제가 발생하였습니다. 강제 종료합니다.");
+				ex.printStackTrace();
+			} finally {
+				System.exit(1);
+			}
+		}
+
+		@Override
+		public void windowClosed(WindowEvent e) {
+		}
+
+		@Override
+		public void windowIconified(WindowEvent e) {
+		}
+
+		@Override
+		public void windowDeiconified(WindowEvent e) {
+		}
+
+		@Override
+		public void windowActivated(WindowEvent e) {
+		}
+
+		@Override
+		public void windowDeactivated(WindowEvent e) {
+		}
+
 	}
 
 }
