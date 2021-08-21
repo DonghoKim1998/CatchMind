@@ -2,7 +2,7 @@ import java.io.Serializable;
 
 public class Message implements Serializable {
 	public enum MsgType {
-		NO_ACT, LOGIN, LOGOUT, LOGIN_FAILURE, CLIENT_MSG, SERVER_MSG, LOGIN_LIST
+		NO_ACT, LOGIN, LOGOUT, LOGIN_FAILURE, CLIENT_MSG, SERVER_MSG, LOGIN_LIST, GAME_START
 	};
 
 	public static final String ALL = "ÀüÃ¼";

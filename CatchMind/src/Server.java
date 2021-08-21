@@ -1,3 +1,4 @@
+import java.awt.TrayIcon.MessageType;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -6,7 +7,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
+import javax.swing.Timer;
+
 public class Server {
+	DrawHandler drawHandler;
+	
 	// userName-ObjectOutputStream 쌍의 클라이언트 OutputStream 저장공간
 	HashMap<String, ObjectOutputStream> clientOutputStreams = new HashMap<String, ObjectOutputStream>();
 
@@ -16,14 +21,19 @@ public class Server {
 	}
 
 	public void go() {
+		drawHandler = new DrawHandler();
+		
 		try {
 			ServerSocket serverSocket = new ServerSocket(9999);
 
 			while (true) {
 				Socket clientSocket = serverSocket.accept();
 
-				Thread thread = new Thread(new ClientHandler(clientSocket));
-				thread.start();
+				Thread chatThread = new Thread(new ChatHanlder(clientSocket));
+				Thread drawThread = new Thread(drawHandler(clientSocket));
+				
+				chatThread.start();
+				drawThread.start();
 
 				System.out.println("Server: 클라이언트 연결 성공");
 			}
@@ -33,12 +43,12 @@ public class Server {
 		}
 	}
 
-	private class ClientHandler implements Runnable {
+	private class ChatHanlder implements Runnable {
 		Socket socket; // 클라이언트 연결용 소켓
 		ObjectInputStream reader; // 수신용 스트림
 		ObjectOutputStream writer; // 송신용 스트림
 
-		public ClientHandler(Socket clientSocket) {
+		public ChatHanlder(Socket clientSocket) {
 			try {
 				socket = clientSocket;
 				writer = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -53,7 +63,7 @@ public class Server {
 			Message message;
 			Message.MsgType type;
 
-			try {
+			try {				
 				while (true) {
 					message = (Message) reader.readObject();
 					type = message.getType();
@@ -144,25 +154,6 @@ public class Server {
 		}
 	}
 
-	private void broadCastLogin(String str) {
-		String user;
-		Set<String> users = clientOutputStreams.keySet();
-		Iterator<String> iterator = users.iterator();
-
-		while (iterator.hasNext()) {
-			user = iterator.next();
-
-			try {
-				ObjectOutputStream writer = clientOutputStreams.get(user);
-				writer.writeObject(str);
-				writer.flush();
-			} catch (Exception e) {
-				System.out.println("Server: 서버에서 송신 중 이상 발 생");
-				e.printStackTrace();
-			}
-		}
-	}
-
 	private String makeClientList() {
 		Set<String> s = clientOutputStreams.keySet(); // 먼저 등록된 사용자들을 추출
 		Iterator<String> it = s.iterator();
@@ -173,6 +164,10 @@ public class Server {
 		}
 
 		return userList;
+	}
+
+	private void gameStart() {
+		System.out.println("1");
 	}
 
 }

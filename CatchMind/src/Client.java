@@ -34,6 +34,7 @@ public class Client {
 	String frameTitle = "CatchMind";
 
 	Game game;
+	boolean turn = false;
 
 	Socket socket;
 	ObjectInputStream reader; // 수신용 스트림
@@ -69,7 +70,7 @@ public class Client {
 		userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		userList.setFixedCellWidth(100);
 
-		// 메시지 입력 창
+		// 메시지 입력 창2
 		chat = new JTextArea(15, 25);
 		chat.addKeyListener(new EnterKeyListener());
 		chat.setLineWrap(true);
@@ -170,8 +171,11 @@ public class Client {
 						// 보낸 사람이 나인 경우
 						if (message.getSender().equals(userName))
 							continue;
-
-						chatLog.append(message.getSender() + ": " + message.getMessage() + "\n");
+						// 서버 메시지인 경우
+						if (message.getSender().equals("Server"))
+							chatLog.append("[Server]: " + message.getMessage() + "\n");
+						else
+							chatLog.append(message.getSender() + ": " + message.getMessage() + "\n");
 					} else if (type == Message.MsgType.LOGIN_FAILURE) {
 						JOptionPane.showMessageDialog(null, "이미 있는 아이디입니다. 다시 로그인하세요");
 						login();
