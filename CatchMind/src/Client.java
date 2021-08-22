@@ -1,5 +1,7 @@
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
@@ -35,9 +37,12 @@ public class Client {
 
 	Game game;
 	boolean turn = false;
+	
+	Graphics graphics;
+	Graphics2D g;
 
 	Socket socket;
-	ObjectInputStream reader; // 수신용 스트림
+	ObjectInputStream reader; // 수신용스트림
 	ObjectOutputStream writer; // 송신용 스트림
 
 	public static void main(String[] args) {
@@ -48,6 +53,11 @@ public class Client {
 	private void go() {
 		frame = new JFrame();
 		game = new Game();
+		
+		// 게임 패널 그래픽 설정
+//		graphics = game.getGraphics();
+//		g = (Graphics2D) graphics;
+//		game.setGraphics(g);
 
 		// 채팅 로그
 		chatLog = new JTextArea(25, 10);
@@ -133,6 +143,8 @@ public class Client {
 			socket = new Socket("127.0.0.1", 9999);
 			reader = new ObjectInputStream(socket.getInputStream());
 			writer = new ObjectOutputStream(socket.getOutputStream());
+			game.reader = reader;
+			game.writer = writer;
 
 			login();
 		} catch (Exception e) {
@@ -193,12 +205,22 @@ public class Client {
 						users = sortUsers(users);
 						users[0] = Message.ALL;
 						userList.setListData(users);
-						frame.repaint();
 					} else if (type == Message.MsgType.NO_ACT) {
+					} else if (type == Message.MsgType.DRAW) {
+						game.setStartPoint(message.getStartPoint());
+						game.setEndPoint(message.getEndPoint());
+						game.setColor(message.getColor());
+						game.drawPanel.thickness = message.getThickness();
+
+						game.draw(game.g);
+
+						game.setStartPoint(game.getEndPoint());
+						System.out.println("Client" + userName);
 					} else
 						throw new Exception("서버에서 알 수 없는 메시지 도착");
 				}
 			} catch (Exception e) {
+				e.printStackTrace();
 				System.out.println("클라이언트 스레드 종료");
 			}
 		}
@@ -239,18 +261,13 @@ public class Client {
 					e.consume();
 					pressCheck = false;
 
-					String target = (String) userList.getSelectedValue();
-					if (target == null) {
-						JOptionPane.showMessageDialog(null, "송신할 대상을 선택한 후 메시지를 보내세요");
-						return;
-					}
-
 					try {
 						chatLog.append(userName + ": " + chat.getText() + "\n"); // 나의 메시지 창에 보이기
 						chatLog.setSelectionStart(chatLog.getText().length());
 						chatLogScroller.getVerticalScrollBar()
 								.setValue(chatLogScroller.getVerticalScrollBar().getMaximum());
-						writer.writeObject(new Message(Message.MsgType.CLIENT_MSG, userName, target, chat.getText()));
+						writer.writeObject(
+								new Message(Message.MsgType.CLIENT_MSG, userName, Message.ALL, chat.getText()));
 						writer.flush();
 						chat.setText("");
 						chat.requestFocus();

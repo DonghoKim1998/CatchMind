@@ -14,7 +14,7 @@ import java.io.Serializable;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
-public class DrawPanel extends JPanel implements Serializable {
+public class DrawPanel extends JPanel {
 	ImageIcon pencilImg = new ImageIcon("img/pencil.png");
 	ImageIcon eraserImg = new ImageIcon("img/eraser.png");
 	Toolkit toolKit = Toolkit.getDefaultToolkit();
@@ -23,10 +23,6 @@ public class DrawPanel extends JPanel implements Serializable {
 
 	int startX, startY, endX, endY;
 	int thickness;
-
-	Graphics graphics;
-	Graphics2D g;
-	Color drawColor;
 
 	public DrawPanel() {
 		setPanel();
@@ -38,64 +34,5 @@ public class DrawPanel extends JPanel implements Serializable {
 		this.setBackground(Color.white);
 		this.setPreferredSize(new Dimension(300, 600));
 		this.setCursor(pencil);
-		this.addMouseListener(new MyMouseListener());
-		this.addMouseMotionListener(new Paint());
 	}
-
-	class MyMouseListener implements MouseListener {
-		@Override
-		public void mousePressed(MouseEvent e) {
-			startX = e.getX();
-			startY = e.getY();
-		}
-
-		@Override
-		public void mouseClicked(MouseEvent e) {
-		}
-
-		@Override
-		public void mouseReleased(MouseEvent e) {
-		}
-
-		@Override
-		public void mouseEntered(MouseEvent e) {
-		}
-
-		@Override
-		public void mouseExited(MouseEvent e) {
-		}
-	}
-	// End MouseListener
-
-	// Start MouseMotionListener
-	public class Paint implements MouseMotionListener {
-		@Override
-		public void mouseDragged(MouseEvent e) {
-			endX = e.getX();
-			endY = e.getY();
-
-			graphics = getGraphics();
-			g = (Graphics2D) graphics;
-			g.setColor(drawColor);
-			g.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, 0));
-			g.drawLine(startX, startY, endX, endY);
-
-			startX = endX;
-			startY = endY;
-		}
-
-		@Override
-		public void mouseMoved(MouseEvent e) {
-		}
-	}
-	// End MouseMotionListener
-
-	public void cleanAll() {
-		graphics = getGraphics();
-		g = (Graphics2D) graphics;
-
-		g.setColor(Color.white);
-		g.fillRect(0, 0, this.getWidth(), this.getHeight());
-	}
-
 }

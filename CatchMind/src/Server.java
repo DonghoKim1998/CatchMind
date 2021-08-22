@@ -1,4 +1,6 @@
-import java.awt.TrayIcon.MessageType;
+import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -10,8 +12,9 @@ import java.util.Set;
 import javax.swing.Timer;
 
 public class Server {
-	DrawHandler drawHandler;
-	
+	TimerClass timerClass = new TimerClass();
+	Timer timer = new Timer(1000, timerClass);
+
 	// userName-ObjectOutputStream 쌍의 클라이언트 OutputStream 저장공간
 	HashMap<String, ObjectOutputStream> clientOutputStreams = new HashMap<String, ObjectOutputStream>();
 
@@ -21,19 +24,15 @@ public class Server {
 	}
 
 	public void go() {
-		drawHandler = new DrawHandler();
-		
 		try {
 			ServerSocket serverSocket = new ServerSocket(9999);
 
 			while (true) {
 				Socket clientSocket = serverSocket.accept();
 
-				Thread chatThread = new Thread(new ChatHanlder(clientSocket));
-				Thread drawThread = new Thread(drawHandler(clientSocket));
-				
-				chatThread.start();
-				drawThread.start();
+				Thread thread = new Thread(new ClientHandler(clientSocket));
+
+				thread.start();
 
 				System.out.println("Server: 클라이언트 연결 성공");
 			}
@@ -43,12 +42,12 @@ public class Server {
 		}
 	}
 
-	private class ChatHanlder implements Runnable {
+	private class ClientHandler implements Runnable {
 		Socket socket; // 클라이언트 연결용 소켓
 		ObjectInputStream reader; // 수신용 스트림
 		ObjectOutputStream writer; // 송신용 스트림
 
-		public ChatHanlder(Socket clientSocket) {
+		public ClientHandler(Socket clientSocket) {
 			try {
 				socket = clientSocket;
 				writer = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -63,7 +62,7 @@ public class Server {
 			Message message;
 			Message.MsgType type;
 
-			try {				
+			try {
 				while (true) {
 					message = (Message) reader.readObject();
 					type = message.getType();
@@ -79,6 +78,9 @@ public class Server {
 						reader.close();
 						socket.close();
 						return;
+					} else if (type == Message.MsgType.DRAW) {
+						broadCastMessage(message);
+						System.out.println("Server");
 					} else if (type == Message.MsgType.NO_ACT) {
 						continue;
 					} else {
@@ -88,6 +90,7 @@ public class Server {
 			}
 			// 연결된 클라이언트 종료 시 예외발생
 			catch (Exception e) {
+				System.out.println(e);
 				System.out.println("Server: 클라이언트 접속 종료");
 			}
 		}
@@ -110,6 +113,14 @@ public class Server {
 		// 새로운 로그인 리스트를 전체에게 보내 줌
 		broadCastMessage(new Message(Message.MsgType.LOGIN_LIST, "", "", makeClientList()));
 		broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", user + "님이 접속하셨습니다."));
+
+		if (clientOutputStreams.size() > 1) {
+			timer.stop();
+			timerClass.time = 0;
+
+			timer.start();
+			broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", "10초 후 게임을 시작합니다."));
+		}
 	}
 
 	private synchronized void handleLogout(String user) {
@@ -148,7 +159,7 @@ public class Server {
 				writer.writeObject(message);
 				writer.flush();
 			} catch (Exception e) {
-				System.out.println("Server: 서버에서 송신 중 이상 발 생");
+				System.out.println("Server: 서버에서 송신 중 이상 발생");
 				e.printStackTrace();
 			}
 		}
@@ -167,7 +178,23 @@ public class Server {
 	}
 
 	private void gameStart() {
-		System.out.println("1");
+		broadCastMessage(new Message(Message.MsgType.SERVER_MSG, "Server", "", "게임을 시작합니다."));
 	}
 
+	// 게임 시작 전 카운팅하는 클래스
+	class TimerClass implements ActionListener {
+		int time = 0;
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			time++;
+			System.out.println(time);
+
+			if (time >= 10) {
+				time = 0;
+				timer.stop();
+				gameStart();
+			}
+		}
+	}
 }

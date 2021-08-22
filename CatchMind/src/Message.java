@@ -1,13 +1,18 @@
+import java.awt.Color;
+import java.awt.Point;
 import java.io.Serializable;
 
 public class Message implements Serializable {
 	public enum MsgType {
-		NO_ACT, LOGIN, LOGOUT, LOGIN_FAILURE, CLIENT_MSG, SERVER_MSG, LOGIN_LIST, GAME_START
+		NO_ACT, LOGIN, LOGOUT, LOGIN_FAILURE, CLIENT_MSG, SERVER_MSG, LOGIN_LIST, GAME_START, DRAW
 	};
 
 	public static final String ALL = "ÀüÃ¼";
 	private MsgType type;
 	private String sender, receiver, message;
+	private Point startPoint, endPoint;
+	private Color color;
+	private int thickness;
 
 	public Message() {
 		this(MsgType.NO_ACT, "", "", "");
@@ -18,6 +23,14 @@ public class Message implements Serializable {
 		this.sender = sender;
 		this.receiver = receiver;
 		this.message = msg;
+	}
+
+	public Message(MsgType type, Point startPoint, Point endPoint, Color color, int thickness) {
+		this.type = type;
+		this.startPoint = startPoint;
+		this.endPoint = endPoint;
+		this.color = color;
+		this.thickness = thickness;
 	}
 
 	public void setType(MsgType type) {
@@ -50,6 +63,38 @@ public class Message implements Serializable {
 
 	public String getMessage() {
 		return this.message;
+	}
+
+	public void setStartPoint(Point p) {
+		this.startPoint = p;
+	}
+
+	public Point getStartPoint() {
+		return this.startPoint;
+	}
+	
+	public void setEndPoint(Point p) {
+		this.endPoint = p;
+	}
+
+	public Point getEndPoint() {
+		return this.endPoint;
+	}
+	
+	public void setColor(Color color) {
+		this.color = color;
+	}
+	
+	public Color getColor() {
+		return this.color;
+	}
+	
+	public void setThickness(int thickness) {
+		this.thickness = thickness;
+	}
+	
+	public int getThickness() {
+		return this.thickness;
 	}
 
 	public String toString() {

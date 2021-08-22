@@ -1,8 +1,15 @@
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
@@ -22,10 +29,14 @@ public class Game extends JPanel {
 	JPanel toolPanel, colorPanel;
 	DrawPanel drawPanel;
 
-	int startX, startY, endX, endY;
+	private int startX, startY, endX, endY;
 
 	ObjectInputStream reader;
 	ObjectOutputStream writer;
+	
+	Graphics graphics;
+	Graphics2D g;
+	Color drawColor;
 
 	public Game() {
 		// 색깔 버튼 설정
@@ -35,6 +46,8 @@ public class Game extends JPanel {
 		this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		drawPanel = new DrawPanel();
+		drawPanel.addMouseListener(new MyMouseListener());
+		drawPanel.addMouseMotionListener(new Paint());
 
 		toolPanel = new JPanel();
 		toolPanel.setLayout(new BoxLayout(toolPanel, BoxLayout.X_AXIS));
@@ -100,41 +113,41 @@ public class Game extends JPanel {
 			// 빨간색
 			if (e.getSource() == colorButtons[0]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.red;
+				drawColor = Color.red;
 			}
 			// 주황색
 			else if (e.getSource() == colorButtons[1]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.orange;
+				drawColor = Color.orange;
 			}
 			// 노란색
 			else if (e.getSource() == colorButtons[2]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.yellow;
+				drawColor = Color.yellow;
 			}
 			// 초록색
 			else if (e.getSource() == colorButtons[3]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.green;
+				drawColor = Color.green;
 			}
 			// 파란색
 			else if (e.getSource() == colorButtons[4]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.blue;
+				drawColor = Color.blue;
 			}
 			// 검정색
 			else if (e.getSource() == colorButtons[5]) {
 				drawPanel.setCursor(drawPanel.pencil);
-				drawPanel.drawColor = Color.black;
+				drawColor = Color.black;
 			}
 			// 모두 지우기
 			else if (e.getSource() == cleanAll) {
-				drawPanel.cleanAll();
+				cleanAll();
 			}
 			// 지우기
 			else if (e.getSource() == eraser) {
 				drawPanel.setCursor(drawPanel.eraser);
-				drawPanel.drawColor = Color.white;
+				drawColor = Color.white;
 			}
 			// 굵게
 			else if (e.getSource() == thick) {
@@ -150,6 +163,96 @@ public class Game extends JPanel {
 				thickness.setText("" + drawPanel.thickness);
 			}
 		}
+	} // End ActionListener
+
+	class MyMouseListener implements MouseListener {
+		@Override
+		public void mousePressed(MouseEvent e) {
+			startX = e.getX();
+			startY = e.getY();
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+		}
 	}
-	// End ActionListener
+	// End MouseListener
+
+	// Start MouseMotionListener
+	public class Paint implements MouseMotionListener {
+		@Override
+		public void mouseDragged(MouseEvent e) {
+			endX = e.getX();
+			endY = e.getY();
+
+			draw(g);
+
+			try {
+				writer.writeObject(new Message(Message.MsgType.DRAW, new Point(startX, startY), new Point(endX, endY),
+						drawColor, drawPanel.thickness));
+				writer.flush();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+
+			startX = endX;
+			startY = endY;
+		}
+
+		@Override
+		public void mouseMoved(MouseEvent e) {
+		}
+	}
+	// End MouseMotionListener
+
+	public void draw(Graphics2D g) {
+		graphics = getGraphics();
+		g = (Graphics2D)graphics;
+		g.setColor(drawColor);
+		g.setStroke(new BasicStroke(drawPanel.thickness, BasicStroke.CAP_ROUND, 0));
+		g.drawLine(startX, startY, endX, endY);
+	}
+
+	public void cleanAll() {
+		g.setColor(Color.white);
+		g.fillRect(0, 0, drawPanel.getWidth(), drawPanel.getHeight());
+	}
+
+	public void setStartPoint(Point point) {
+		this.startX = point.x;
+		this.startY = point.y;
+	}
+
+	public void setEndPoint(Point point) {
+		this.endX = point.x;
+		this.endY = point.y;
+	}
+
+	public Point getEndPoint() {
+		return new Point(this.endX, this.endY);
+	}
+
+	public void setColor(Color color) {
+		this.drawColor = color;
+	}
+
+	public void setThickness(int thickness) {
+		drawPanel.thickness = thickness;
+	}
+	
+	public void setGraphics(Graphics2D g) {
+		this.g = g;
+	}
 }
