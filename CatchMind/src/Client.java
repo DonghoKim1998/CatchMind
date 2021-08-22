@@ -43,8 +43,6 @@ public class Client {
 	String word;
 
 	Game game;
-	Graphics graphics;
-	Graphics2D g;
 
 	Socket socket;
 	ObjectInputStream reader; // 수신용스트림
@@ -203,12 +201,18 @@ public class Client {
 							chatLog.append("[Server]: " + message.getMessage() + "\n");
 						else
 							chatLog.append(message.getSender() + ": " + message.getMessage() + "\n");
-					} else if (type == Message.MsgType.LOGIN_FAILURE) {
+					}
+					// 로그인 실패인 경우
+					else if (type == Message.MsgType.LOGIN_FAILURE) {
 						JOptionPane.showMessageDialog(null, "이미 있는 아이디입니다. 다시 로그인하세요");
 						login();
-					} else if (type == Message.MsgType.CLEAR) {
+					}
+					// 모두 지우기 요청인 경우
+					else if (type == Message.MsgType.CLEAR) {
 						game.cleanAll();
-					} else if (type == Message.MsgType.LOGIN_LIST) {
+					}
+					// 로그인 리스트 요청인 경우
+					else if (type == Message.MsgType.LOGIN_LIST) {
 						String[] users = message.getMessage().split("/");
 
 						for (int i = 0; i < users.length; i++) {
@@ -219,7 +223,9 @@ public class Client {
 						users = sortUsers(users);
 						users[0] = Message.ALL;
 						userList.setListData(users);
-					} else if (type == Message.MsgType.DRAW) {
+					}
+					// 그리기 요청인 경우
+					else if (type == Message.MsgType.DRAW) {
 						game.setStartPoint(message.getStartPoint());
 						game.setEndPoint(message.getEndPoint());
 						game.setColor(message.getColor());
@@ -333,10 +339,6 @@ public class Client {
 
 	private class CloseListener implements WindowListener {
 		@Override
-		public void windowOpened(WindowEvent e) {
-		}
-
-		@Override
 		public void windowClosing(WindowEvent e) {
 			JOptionPane.showMessageDialog(null, "게임을 종료합니다.");
 
@@ -353,6 +355,10 @@ public class Client {
 			} finally {
 				System.exit(1);
 			}
+		}
+		
+		@Override
+		public void windowOpened(WindowEvent e) {
 		}
 
 		@Override

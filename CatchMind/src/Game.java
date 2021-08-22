@@ -283,12 +283,4 @@ public class Game extends JPanel {
 	public void setColor(Color color) {
 		this.drawColor = color;
 	}
-
-	public void setThickness(int thickness) {
-		thicknessInt = thickness;
-	}
-
-	public void setGraphics(Graphics2D g) {
-		this.g = g;
-	}
 }
