@@ -1,63 +1,87 @@
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class Game extends JPanel {
+	ImageIcon pencilImg = new ImageIcon("img/pencil.png");
+	ImageIcon eraserImg = new ImageIcon("img/eraser.png");
+	Toolkit toolKit = Toolkit.getDefaultToolkit();
+	Cursor pencil = toolKit.createCustomCursor(pencilImg.getImage(), new Point(0, 0), "pencil");
+	Cursor eraser = toolKit.createCustomCursor(eraserImg.getImage(), new Point(0, 0), "eraser");
+
 	ArrayList<Point> board = new ArrayList<>();
 
 	JButton[] colorButtons;
-	JButton cleanAll, eraser, thick, thin;
+	JButton cleanAllBtn, eraserBtn, thickBtn, thinBtn;
 	JLabel thickness;
-	JPanel toolPanel, colorPanel;
-	DrawPanel drawPanel;
-
-	private int startX, startY, endX, endY;
+	JPanel drawPanel, toolPanel, colorPanel;
 
 	ObjectInputStream reader;
 	ObjectOutputStream writer;
-	
+
+	// Listener Classes
+	Draw draw = new Draw();
+	ButtonListener buttonListener = new ButtonListener();
+	MyMouseListener myMouseListener = new MyMouseListener();
+
+	// To Draw
 	Graphics graphics;
 	Graphics2D g;
 	Color drawColor;
+	
+	private int startX, startY, endX, endY;
+	int thicknessInt = 5;
+	
+	boolean isActiveDraw, isActiveButton;
 
+	// Constructor
 	public Game() {
-		// 색깔 버튼 설정
+		// 버튼 세팅 메소드
 		setButton();
 
 		// GUI 배치
 		this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		drawPanel = new DrawPanel();
-		drawPanel.addMouseListener(new MyMouseListener());
-		drawPanel.addMouseMotionListener(new Paint());
+		drawPanel = new JPanel();
+		drawPanel.setBackground(Color.white);
+		drawPanel.setPreferredSize(new Dimension(300, 600));
+		drawPanel.setCursor(pencil);
+		drawPanel.addMouseListener(myMouseListener);
+		drawPanel.addMouseMotionListener(draw);
 
 		toolPanel = new JPanel();
 		toolPanel.setLayout(new BoxLayout(toolPanel, BoxLayout.X_AXIS));
 
-		toolPanel.add(thick);
+		toolPanel.add(thickBtn);
 		toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-		toolPanel.add(thin);
+		toolPanel.add(thinBtn);
 		toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
 
-		thickness = new JLabel("" + drawPanel.thickness);
+		thickness = new JLabel("" + thicknessInt);
 		toolPanel.add(thickness);
 		toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
 
@@ -65,9 +89,9 @@ public class Game extends JPanel {
 			toolPanel.add(colorButtons[i]);
 			toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
 		}
-		toolPanel.add(cleanAll);
+		toolPanel.add(cleanAllBtn);
 		toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-		toolPanel.add(eraser);
+		toolPanel.add(eraserBtn);
 		toolPanel.add(Box.createRigidArea(new Dimension(10, 0)));
 
 		this.add(drawPanel);
@@ -76,13 +100,14 @@ public class Game extends JPanel {
 		setPreferredSize(new Dimension(770, 900));
 	}
 
+	// 버튼 세팅 메소드
 	private void setButton() {
-		// 색상 변경
+		// 색상
 		colorButtons = new JButton[6];
 		for (int i = 0; i < colorButtons.length; i++) {
 			colorButtons[i] = new JButton();
 			colorButtons[i].setPreferredSize(new Dimension(10, 50));
-			colorButtons[i].addActionListener(new ButtonListener());
+			colorButtons[i].addActionListener(buttonListener);
 		}
 		colorButtons[0].setBackground(Color.red);
 		colorButtons[1].setBackground(Color.orange);
@@ -91,82 +116,84 @@ public class Game extends JPanel {
 		colorButtons[4].setBackground(Color.blue);
 		colorButtons[5].setBackground(Color.black);
 
-		// 모두 지우기 버튼
-		cleanAll = new JButton("모두 지우기");
-		cleanAll.addActionListener(new ButtonListener());
+		// 모두 지우기
+		cleanAllBtn = new JButton("모두 지우기");
+		cleanAllBtn.addActionListener(buttonListener);
 
-		// 지우기 버튼
-		eraser = new JButton("지우기");
-		eraser.addActionListener(new ButtonListener());
+		// 지우기
+		eraserBtn = new JButton("지우기");
+		eraserBtn.addActionListener(buttonListener);
 
-		// 굵기 조절 버튼
-		thick = new JButton("굵게");
-		thick.addActionListener(new ButtonListener());
-		thin = new JButton("얇게");
-		thin.addActionListener(new ButtonListener());
+		// 굵기 조절
+		thickBtn = new JButton("굵게");
+		thickBtn.addActionListener(buttonListener);
+		thinBtn = new JButton("얇게");
+		thinBtn.addActionListener(buttonListener);
 	}
 
-	// Start ActionListener
+	// Start of Listeners
 	class ButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// 빨간색
-			if (e.getSource() == colorButtons[0]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.red;
-			}
-			// 주황색
-			else if (e.getSource() == colorButtons[1]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.orange;
-			}
-			// 노란색
-			else if (e.getSource() == colorButtons[2]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.yellow;
-			}
-			// 초록색
-			else if (e.getSource() == colorButtons[3]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.green;
-			}
-			// 파란색
-			else if (e.getSource() == colorButtons[4]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.blue;
-			}
-			// 검정색
-			else if (e.getSource() == colorButtons[5]) {
-				drawPanel.setCursor(drawPanel.pencil);
-				drawColor = Color.black;
-			}
-			// 모두 지우기
-			else if (e.getSource() == cleanAll) {
-				try {
-					writer.writeObject(new Message(Message.MsgType.CLEAR));
-					writer.flush();
-				} catch (IOException e1) {
-					e1.printStackTrace();
+			if (isActiveButton) {
+				// 빨간색
+				if (e.getSource() == colorButtons[0]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.red;
 				}
-				cleanAll();
-			}
-			// 지우기
-			else if (e.getSource() == eraser) {
-				drawPanel.setCursor(drawPanel.eraser);
-				drawColor = Color.white;
-			}
-			// 굵게
-			else if (e.getSource() == thick) {
-				drawPanel.thickness += 1;
-				thickness.setText("" + drawPanel.thickness);
-			}
-			// 얅게
-			else if (e.getSource() == thin) {
-				if (drawPanel.thickness == 5)
-					return;
+				// 주황색
+				else if (e.getSource() == colorButtons[1]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.orange;
+				}
+				// 노란색
+				else if (e.getSource() == colorButtons[2]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.yellow;
+				}
+				// 초록색
+				else if (e.getSource() == colorButtons[3]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.green;
+				}
+				// 파란색
+				else if (e.getSource() == colorButtons[4]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.blue;
+				}
+				// 검정색
+				else if (e.getSource() == colorButtons[5]) {
+					drawPanel.setCursor(pencil);
+					drawColor = Color.black;
+				}
+				// 모두 지우기
+				else if (e.getSource() == cleanAllBtn) {
+					try {
+						writer.writeObject(new Message(Message.MsgType.CLEAR));
+						writer.flush();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					cleanAll();
+				}
+				// 지우기
+				else if (e.getSource() == eraserBtn) {
+					drawPanel.setCursor(eraser);
+					drawColor = Color.white;
+				}
+				// 굵게
+				else if (e.getSource() == thickBtn) {
+					thicknessInt += 1;
+					thickness.setText("" + thicknessInt);
+				}
+				// 얅게
+				else if (e.getSource() == thinBtn) {
+					if (thicknessInt == 5)
+						return;
 
-				drawPanel.thickness -= 1;
-				thickness.setText("" + drawPanel.thickness);
+					thicknessInt -= 1;
+					thickness.setText("" + thicknessInt);
+				}
 			}
 		}
 	} // End ActionListener
@@ -193,47 +220,48 @@ public class Game extends JPanel {
 		@Override
 		public void mouseExited(MouseEvent e) {
 		}
-	}
-	// End MouseListener
+	} // End MouseListener
 
-	// Start MouseMotionListener
-	public class Paint implements MouseMotionListener {
+	// To Draw
+	public class Draw implements MouseMotionListener {
 		@Override
 		public void mouseDragged(MouseEvent e) {
-			endX = e.getX();
-			endY = e.getY();
+			if (isActiveDraw) {
+				endX = e.getX();
+				endY = e.getY();
 
-			draw(g);
+				draw(g);
 
-			try {
-				writer.writeObject(new Message(Message.MsgType.DRAW, new Point(startX, startY), new Point(endX, endY),
-						drawColor, drawPanel.thickness));
-				writer.flush();
-			} catch (IOException e1) {
-				e1.printStackTrace();
+				try {
+					writer.writeObject(new Message(Message.MsgType.DRAW, new Point(startX, startY),
+							new Point(endX, endY), drawColor, thicknessInt));
+					writer.flush();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+
+				startX = endX;
+				startY = endY;
 			}
-
-			startX = endX;
-			startY = endY;
 		}
 
 		@Override
 		public void mouseMoved(MouseEvent e) {
 		}
-	}
-	// End MouseMotionListener
+	} // End MouseMotionListener
 
+	// Method to draw
 	public void draw(Graphics2D g) {
 		graphics = getGraphics();
-		g = (Graphics2D)graphics;
+		g = (Graphics2D) graphics;
 		g.setColor(drawColor);
-		g.setStroke(new BasicStroke(drawPanel.thickness, BasicStroke.CAP_ROUND, 0));
+		g.setStroke(new BasicStroke(thicknessInt, BasicStroke.CAP_ROUND, 0));
 		g.drawLine(startX, startY, endX, endY);
 	}
 
 	public void cleanAll() {
 		graphics = getGraphics();
-		g = (Graphics2D)graphics;
+		g = (Graphics2D) graphics;
 		g.setColor(Color.white);
 		g.fillRect(0, 0, drawPanel.getWidth(), drawPanel.getHeight());
 	}
@@ -257,9 +285,9 @@ public class Game extends JPanel {
 	}
 
 	public void setThickness(int thickness) {
-		drawPanel.thickness = thickness;
+		thicknessInt = thickness;
 	}
-	
+
 	public void setGraphics(Graphics2D g) {
 		this.g = g;
 	}

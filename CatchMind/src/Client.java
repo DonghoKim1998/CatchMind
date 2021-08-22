@@ -6,12 +6,15 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.File;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -26,6 +29,9 @@ import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 
 public class Client {
+	File bgm = new File("sound/bgm.wav");
+	Clip bgmClip;
+
 	JFrame frame;
 	JTextArea chatLog, chat;
 	JScrollPane chatLogScroller, chatScroller, userListScroller;
@@ -34,16 +40,18 @@ public class Client {
 
 	String userName;
 	String frameTitle = "CatchMind";
+	String word;
 
 	Game game;
-	boolean turn = false;
-	
 	Graphics graphics;
 	Graphics2D g;
 
 	Socket socket;
 	ObjectInputStream reader; // 수신용스트림
 	ObjectOutputStream writer; // 송신용 스트림
+
+	final private String URL = "220.69.203.88";
+	final private int PORT = 9999;
 
 	public static void main(String[] args) {
 		Client client = new Client();
@@ -53,11 +61,6 @@ public class Client {
 	private void go() {
 		frame = new JFrame();
 		game = new Game();
-		
-		// 게임 패널 그래픽 설정
-//		graphics = game.getGraphics();
-//		g = (Graphics2D) graphics;
-//		game.setGraphics(g);
 
 		// 채팅 로그
 		chatLog = new JTextArea(25, 10);
@@ -124,14 +127,22 @@ public class Client {
 		mainPanel.add(statePanel);
 		frame.getContentPane().add(mainPanel);
 
-		// 서버와 통신 시도
+		// 서버에 접속
 		setUpNetWorking();
 		Thread readerThread = new Thread(new MessageReader());
 		readerThread.start();
 
+		// sound 초기화 및 bgm 재생
+		try {
+			bgmClip = AudioSystem.getClip();
+			bgmClip.open(AudioSystem.getAudioInputStream(bgm));
+			bgmClip.loop(Clip.LOOP_CONTINUOUSLY);
+			bgmClip.start();
+		} catch (Exception e) {
+		}
+
 		// 프레임 설정
 		frame.addWindowListener(new CloseListener());
-
 		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setBounds(0, 0, 1200, 900);
@@ -139,9 +150,10 @@ public class Client {
 		frame.setVisible(true);
 	}
 
+	// 서버 접속 메소드
 	private void setUpNetWorking() {
 		try {
-			socket = new Socket("127.0.0.1", 9999);
+			socket = new Socket(URL, PORT);
 			reader = new ObjectInputStream(socket.getInputStream());
 			writer = new ObjectOutputStream(socket.getOutputStream());
 			game.reader = reader;
@@ -155,8 +167,9 @@ public class Client {
 		}
 	}
 
+	// 로그인 요청 메소드
 	private void login() {
-		userName = JOptionPane.showInputDialog("사용자 이름을 입력하세요");
+		userName = JOptionPane.showInputDialog(null, "", "Login", JOptionPane.PLAIN_MESSAGE);
 
 		try {
 			writer.writeObject(new Message(Message.MsgType.LOGIN, userName, "", ""));
@@ -166,9 +179,10 @@ public class Client {
 			e.printStackTrace();
 		}
 
-		frame.setTitle(frameTitle + "(" + userName + ")");
+		frame.setTitle(frameTitle + " (Login: " + userName + ")");
 	}
 
+	// 서버로부터 수신
 	public class MessageReader implements Runnable {
 		public void run() {
 			Message message;
@@ -185,18 +199,16 @@ public class Client {
 						if (message.getSender().equals(userName))
 							continue;
 						// 서버 메시지인 경우
-						if (message.getSender().equals("Server"))
+						else if (message.getSender().equals("Server"))
 							chatLog.append("[Server]: " + message.getMessage() + "\n");
 						else
 							chatLog.append(message.getSender() + ": " + message.getMessage() + "\n");
 					} else if (type == Message.MsgType.LOGIN_FAILURE) {
 						JOptionPane.showMessageDialog(null, "이미 있는 아이디입니다. 다시 로그인하세요");
 						login();
-					}
-					else if (type == Message.MsgType.CLEAR) {
+					} else if (type == Message.MsgType.CLEAR) {
 						game.cleanAll();
-					}
-					else if (type == Message.MsgType.LOGIN_LIST) {
+					} else if (type == Message.MsgType.LOGIN_LIST) {
 						String[] users = message.getMessage().split("/");
 
 						for (int i = 0; i < users.length; i++) {
@@ -207,18 +219,41 @@ public class Client {
 						users = sortUsers(users);
 						users[0] = Message.ALL;
 						userList.setListData(users);
-					} else if (type == Message.MsgType.NO_ACT) {
 					} else if (type == Message.MsgType.DRAW) {
 						game.setStartPoint(message.getStartPoint());
 						game.setEndPoint(message.getEndPoint());
 						game.setColor(message.getColor());
-						game.drawPanel.thickness = message.getThickness();
+						game.thicknessInt = message.getThickness();
 
 						game.draw(game.g);
 
 						game.setStartPoint(game.getEndPoint());
-						System.out.println("Client" + userName);
-					} else
+					}
+					// 게임 시작
+					else if (type == Message.MsgType.GAME_START) {
+						game.cleanAll();
+
+						// 본인 차례가 아닌 경우
+						if (!message.getReceiver().equals(userName)) {
+							System.out.println(message.getReceiver());
+							game.isActiveDraw = false;
+							game.isActiveButton = false;
+							chat.setEditable(true);
+						}
+						// 본인 차례인 경우
+						else {
+							System.out.println(message.getReceiver());
+							game.isActiveDraw = true;
+							game.isActiveButton = true;
+							chat.setEditable(false);
+							chatLog.append(message.getMessage() + "를 그려주세요!\n");
+						}
+					}
+					// 아무것도 아닌 경우
+					else if (type == Message.MsgType.NO_ACT) {
+					}
+					// 그 외 경우
+					else
 						throw new Exception("서버에서 알 수 없는 메시지 도착");
 				}
 			} catch (Exception e) {
@@ -243,6 +278,7 @@ public class Client {
 		return outList;
 	}
 
+	// Start of Listeners
 	public class EnterKeyListener implements KeyListener {
 		boolean pressCheck = false;
 
@@ -264,13 +300,15 @@ public class Client {
 					pressCheck = false;
 
 					try {
-						chatLog.append(userName + ": " + chat.getText() + "\n"); // 나의 메시지 창에 보이기
+						// 내 채팅 올리기
+						chatLog.append(userName + ": " + chat.getText() + "\n");
 						chatLog.setSelectionStart(chatLog.getText().length());
 						chatLogScroller.getVerticalScrollBar()
 								.setValue(chatLogScroller.getVerticalScrollBar().getMaximum());
-						writer.writeObject(
-								new Message(Message.MsgType.CLIENT_MSG, userName, Message.ALL, chat.getText()));
+
+						writer.writeObject(new Message(Message.MsgType.CLIENT_MSG, userName, "", chat.getText()));
 						writer.flush();
+
 						chat.setText("");
 						chat.requestFocus();
 					} catch (Exception ex) {
@@ -291,7 +329,7 @@ public class Client {
 		@Override
 		public void keyTyped(KeyEvent e) {
 		}
-	}
+	} // End of KeyListener
 
 	private class CloseListener implements WindowListener {
 		@Override
@@ -336,7 +374,6 @@ public class Client {
 		@Override
 		public void windowDeactivated(WindowEvent e) {
 		}
-
-	}
-
+	} // End of WindowListener
+	// End of Listeners
 }

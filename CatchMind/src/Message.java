@@ -17,7 +17,7 @@ public class Message implements Serializable {
 	public Message() {
 		this(MsgType.NO_ACT, "", "", "");
 	}
-	
+
 	public Message(MsgType type) {
 		this.type = type;
 	}
@@ -76,7 +76,7 @@ public class Message implements Serializable {
 	public Point getStartPoint() {
 		return this.startPoint;
 	}
-	
+
 	public void setEndPoint(Point p) {
 		this.endPoint = p;
 	}
@@ -84,19 +84,19 @@ public class Message implements Serializable {
 	public Point getEndPoint() {
 		return this.endPoint;
 	}
-	
+
 	public void setColor(Color color) {
 		this.color = color;
 	}
-	
+
 	public Color getColor() {
 		return this.color;
 	}
-	
+
 	public void setThickness(int thickness) {
 		this.thickness = thickness;
 	}
-	
+
 	public int getThickness() {
 		return this.thickness;
 	}
