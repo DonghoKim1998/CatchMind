@@ -27,8 +27,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class Game extends JPanel {
-	ImageIcon pencilImg = new ImageIcon("img/pencil.png");
-	ImageIcon eraserImg = new ImageIcon("img/eraser.png");
+	ImageIcon pencilImg = new ImageIcon("src/img/pencil.png");
+	ImageIcon eraserImg = new ImageIcon("src/img/eraser.png");
 	Toolkit toolKit = Toolkit.getDefaultToolkit();
 	Cursor pencil = toolKit.createCustomCursor(pencilImg.getImage(), new Point(0, 0), "pencil");
 	Cursor eraser = toolKit.createCustomCursor(eraserImg.getImage(), new Point(0, 0), "eraser");
@@ -56,7 +56,7 @@ public class Game extends JPanel {
 	private int startX, startY, endX, endY;
 	int thicknessInt = 5;
 	
-	boolean isActiveDraw, isActiveButton;
+	boolean isActiveDraw = true, isActiveButton = true;
 
 	// Constructor
 	public Game() {

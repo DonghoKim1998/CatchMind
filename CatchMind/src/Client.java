@@ -29,7 +29,7 @@ import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 
 public class Client {
-	File bgm = new File("sound/bgm.wav");
+	File bgm = new File("src/sound/bgm.wav");
 	Clip bgmClip;
 
 	JFrame frame;
@@ -375,5 +375,5 @@ public class Client {
 		public void windowDeactivated(WindowEvent e) {
 		}
 	} // End of WindowListener
-	// End of Listeners
+		// End of Listeners
 }
