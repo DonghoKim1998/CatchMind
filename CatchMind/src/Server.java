@@ -81,6 +81,8 @@ public class Server {
 					} else if (type == Message.MsgType.DRAW) {
 						broadCastMessage(message);
 						System.out.println("Server");
+					} else if (type == Message.MsgType.CLEAR) {
+						broadCastMessage(message);
 					} else if (type == Message.MsgType.NO_ACT) {
 						continue;
 					} else {

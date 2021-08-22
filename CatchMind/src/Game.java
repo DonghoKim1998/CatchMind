@@ -142,6 +142,12 @@ public class Game extends JPanel {
 			}
 			// 모두 지우기
 			else if (e.getSource() == cleanAll) {
+				try {
+					writer.writeObject(new Message(Message.MsgType.CLEAR));
+					writer.flush();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				cleanAll();
 			}
 			// 지우기
@@ -226,6 +232,8 @@ public class Game extends JPanel {
 	}
 
 	public void cleanAll() {
+		graphics = getGraphics();
+		g = (Graphics2D)graphics;
 		g.setColor(Color.white);
 		g.fillRect(0, 0, drawPanel.getWidth(), drawPanel.getHeight());
 	}

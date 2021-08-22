@@ -132,6 +132,7 @@ public class Client {
 		// 프레임 설정
 		frame.addWindowListener(new CloseListener());
 
+		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setBounds(0, 0, 1200, 900);
 		frame.setLocationRelativeTo(null);
@@ -192,8 +193,9 @@ public class Client {
 						JOptionPane.showMessageDialog(null, "이미 있는 아이디입니다. 다시 로그인하세요");
 						login();
 					}
-					// 유저리스트를 추출해서 userList에 삽입
-					// 본인은 ""로 만들어 정렬 후 리스트 맨 앞으로 오게 함
+					else if (type == Message.MsgType.CLEAR) {
+						game.cleanAll();
+					}
 					else if (type == Message.MsgType.LOGIN_LIST) {
 						String[] users = message.getMessage().split("/");
 
