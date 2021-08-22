@@ -52,10 +52,10 @@ public class Game extends JPanel {
 	Graphics graphics;
 	Graphics2D g;
 	Color drawColor;
-	
+
 	private int startX, startY, endX, endY;
 	int thicknessInt = 5;
-	
+
 	boolean isActiveDraw = true, isActiveButton = true;
 
 	// Constructor

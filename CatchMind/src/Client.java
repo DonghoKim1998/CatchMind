@@ -356,7 +356,7 @@ public class Client {
 				System.exit(1);
 			}
 		}
-		
+
 		@Override
 		public void windowOpened(WindowEvent e) {
 		}
